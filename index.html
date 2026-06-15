@@ -12,6 +12,19 @@
     --warn:#E8553D; --warn-soft:#FDECE8;
     --radius:18px; --shadow:0 1px 2px rgba(20,24,31,.04), 0 8px 24px rgba(20,24,31,.05);
   }
+  .toast{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(8px);background:var(--ink);color:#fff;font-size:12.5px;font-weight:700;padding:8px 16px;border-radius:999px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:50;box-shadow:0 6px 20px rgba(0,0,0,.18);}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .banner{display:flex;align-items:center;gap:10px;justify-content:space-between;background:linear-gradient(135deg,#0066FF,#4D8DFF);color:#fff;padding:13px 15px;margin-bottom:14px;}
+  .banner span{font-size:13px;font-weight:700;line-height:1.45;}
+  .banner button{border:0;background:rgba(255,255,255,.22);color:#fff;width:26px;height:26px;border-radius:50%;font-size:12px;flex:none;cursor:pointer;}
+  @media (prefers-color-scheme: dark){
+    :root{--ink:#E7EAF0;--sub:#959DAB;--line:#252B34;--bg:#0F1217;--card:#181D25;--off:#39414C;--on:#1FC579;--on-soft:#13301F;--blue:#5B93F6;--blue-soft:#172338;--warn:#FF6F57;--warn-soft:#33201C;--shadow:0 1px 2px rgba(0,0,0,.3),0 10px 26px rgba(0,0,0,.45);}
+    .row:active{background:#1E242D;}
+    .ctr button:active{background:#2A313B;}
+    textarea::placeholder{color:#5C6573;}
+    .src-note{color:#565E68;}
+    .toast{background:#2A313B;color:#E7EAF0;}
+  }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{margin:0;padding:0;}
   body{font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
@@ -132,6 +145,25 @@
   .day .num{font-size:11px;font-weight:700;color:var(--ink);}
   .day.future{opacity:.4;}
 
+  /* monthly calendar */
+  .month{padding:15px 14px;}
+  .month-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .month-head h3{margin:0;font-size:14px;font-weight:800;}
+  .month-head button{border:0;background:var(--bg);width:30px;height:30px;border-radius:9px;font-size:18px;font-weight:700;color:var(--ink);cursor:pointer;}
+  .month-head button:active{transform:scale(.94);}
+  .cal-dow{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:6px;}
+  .cal-dow span{text-align:center;font-size:10px;font-weight:700;color:var(--sub);}
+  .cal-dow span:first-child{color:var(--warn);}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+  .cal-cell{aspect-ratio:1;border-radius:9px;display:flex;align-items:center;justify-content:center;position:relative;font-size:12px;font-weight:700;color:var(--ink);background:var(--bg);cursor:pointer;}
+  .cal-cell.blank{background:transparent;cursor:default;}
+  .cal-cell.out,.cal-cell.future{color:var(--off);background:transparent;}
+  .cal-cell.cur{outline:2.5px solid var(--ink);outline-offset:-2.5px;}
+  .cal-cell .start{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--blue);}
+  .cal-legend{display:flex;align-items:center;gap:4px;margin-top:12px;font-size:10.5px;color:var(--sub);font-weight:600;flex-wrap:wrap;}
+  .cal-legend i{width:13px;height:13px;border-radius:4px;display:inline-block;}
+  .cal-legend b{color:var(--blue);}
+
   /* settings */
   .setbar{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:18px;font-size:12px;color:var(--sub);flex-wrap:wrap;}
   .setitem{display:flex;align-items:center;gap:5px;}
@@ -157,6 +189,11 @@
   <div class="head">
     <div><div class="date" id="dateLabel">—</div><div class="daynum" id="dayNum">—</div></div>
     <div class="phase-badge" id="phaseBadge">—</div>
+  </div>
+
+  <div class="card banner" id="banner" style="display:none">
+    <span id="bannerText"></span>
+    <button id="bannerX" aria-label="닫기">✕</button>
   </div>
 
   <!-- stage guidance -->
@@ -213,13 +250,30 @@
     <div class="days" id="days"></div>
   </div>
 
+  <!-- monthly -->
+  <div class="card month">
+    <div class="month-head">
+      <button id="calPrev" aria-label="이전 달">‹</button>
+      <h3 id="calTitle">—</h3>
+      <button id="calNext" aria-label="다음 달">›</button>
+    </div>
+    <div class="cal-dow"><span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span></div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="cal-legend">루틴 달성 적음
+      <i style="background:rgba(18,179,106,.15)"></i><i style="background:rgba(18,179,106,.42)"></i><i style="background:rgba(18,179,106,.66)"></i><i style="background:rgba(18,179,106,.9)"></i>
+      많음 · <b>●</b> 단계 시작</div>
+  </div>
+
   <div class="setbar">
     <div class="setitem"><span>시작일</span><span id="startLabel">—</span><button id="editStart">변경</button>
       <input type="date" id="startInput" style="display:none"></div>
     <div class="setitem"><span>단식 시작</span><span id="cutLabel">—</span><button id="editCut">변경</button>
       <input type="time" id="cutInput" style="display:none"></div>
+    <div class="setitem"><button id="exportBtn">기록 백업</button><button id="importBtn">백업 불러오기</button>
+      <input type="file" id="importInput" accept="application/json,.json" style="display:none"></div>
   </div>
   <div class="src-note">박용우 「스위치온 다이어트」 기준 · 4주 5단계</div>
+  <div class="toast" id="toast">저장됨</div>
 </div>
 
 <script>
@@ -232,6 +286,57 @@ const Store = {
 };
 function lg(k){ try{ return localStorage.getItem(k); }catch(e){ return (k in mem)?mem[k]:null; } }
 function ls(k,v){ try{ localStorage.setItem(k,v); }catch(e){ mem[k]=v; } }
+
+/* ---------- toast (save feedback) ---------- */
+let toastTimer=null;
+function flashSaved(msg){
+  const t=document.getElementById('toast'); if(!t) return;
+  t.textContent=msg||'저장됨'; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),1100);
+}
+
+/* ---------- backup / restore ---------- */
+async function allDataKeys(){
+  if(Store.has){ try{ const r=await window.storage.list('so:'); if(r&&r.keys) return r.keys; }catch(e){} }
+  const keys=[];
+  try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&k.indexOf('so:')===0) keys.push(k); } }catch(e){}
+  Object.keys(mem).forEach(k=>{ if(k.indexOf('so:')===0 && keys.indexOf(k)<0) keys.push(k); });
+  return keys;
+}
+async function exportData(){
+  try{
+    const keys=await allDataKeys(); const out={};
+    for(const k of keys){ const v=await Store.get(k); if(v!=null) out[k]=v; }
+    const payload={app:'switchon',version:1,exportedAt:new Date().toISOString(),data:out};
+    const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download=`switchon-backup-${keyOf(new Date())}.json`;
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); },1000);
+    flashSaved('백업 파일 저장됨');
+  }catch(e){ flashSaved('백업 실패'); }
+}
+async function importData(file){
+  try{
+    const text=await file.text(); const payload=JSON.parse(text);
+    const data=payload.data||payload; let cnt=0;
+    for(const k in data){ if(k.indexOf('so:')===0){ await Store.set(k,data[k]); cnt++; } }
+    Object.keys(cache).forEach(k=>delete cache[k]);
+    try{ const raw=await Store.get('so:settings'); if(raw){ const s=JSON.parse(raw); if(s.startKey) startKey=s.startKey; if(typeof s.cutHour==='number') cutHour=s.cutHour; } }catch(e){}
+    await render();
+    flashSaved(`${cnt}개 항목 불러옴`);
+  }catch(e){ flashSaved('불러오기 실패 — 파일 확인'); }
+}
+
+/* ---------- stage transition banners ---------- */
+const STAGE_STARTS={
+  1:'스위치온 시작 — 1~3일차는 단백질 음료 4회만, 식사 없음.',
+  4:'오늘부터 2단계 — 점심에 저탄수 식사 추가, 음료는 3회.',
+  8:'2주차 시작 — 음료 2회, 저녁 무탄수. 주 1회 24시간 단식 추가.',
+  15:'3주차 시작 — 주 2회 24시간 단식(연속 X), 단식 후 고단백.',
+  22:'4주차 시작 — 점심·저녁 모두 저탄수, 주 3회 24시간 단식.',
+  29:'유지기 시작 — 주 1회 단식 + 14시간 공복 유지.'
+};
 
 /* ---------- daily habits (stable across stages) ---------- */
 const TOGGLES = [
@@ -292,7 +397,7 @@ async function loadDay(key){
   try{ const raw=await Store.get('so:day:'+key); if(raw) d=Object.assign(defDay(),JSON.parse(raw)); }catch(e){}
   cache[key]=d; return d;
 }
-function saveDay(key){ const d=cache[key]; if(d) Store.set('so:day:'+key, JSON.stringify(d)); }
+function saveDay(key){ const d=cache[key]; if(d){ Store.set('so:day:'+key, JSON.stringify(d)); flashSaved(); } }
 function touch(){ const k=keyOf(cur); if(!cache[k]) cache[k]=defDay(); return cache[k]; }
 
 /* ---------- date utils ---------- */
@@ -308,6 +413,7 @@ function weekDatesFor(d){ const base=midnight(d), dow=(base.getDay()+6)%7, mon=n
 let cur = midnight(new Date());
 let startKey = null;
 let cutHour = 20;   // 단식 시작 시각(저녁 컷오프)
+let calMonth = (function(){ const t=new Date(); return new Date(t.getFullYear(),t.getMonth(),1); })();
 
 /* ---------- adherence ---------- */
 function dailyGating(stg){ return TOGGLES.filter(t=>!t.weekly && stg.n>=(t.from||1)); }
@@ -329,6 +435,12 @@ async function render(){
   const stg=stageFor(dayNum);
   const wkData=await Promise.all(weekDatesFor(cur).map(dd=>loadDay(keyOf(dd))));
   const weekEx=wkData.filter(x=>x.checks&&x.checks.exercise).length;
+
+  // stage transition banner
+  const banner=document.getElementById('banner');
+  const bmsg=STAGE_STARTS[dayNum];
+  if(bmsg && !d.bannerSeen){ document.getElementById('bannerText').textContent=bmsg; banner.style.display='flex'; }
+  else{ banner.style.display='none'; }
 
   document.getElementById('dateLabel').textContent=`${cur.getMonth()+1}월 ${cur.getDate()}일 (${DOW[cur.getDay()]})`;
   document.getElementById('dayNum').textContent=`${dayNum}일차`;
@@ -400,6 +512,7 @@ async function render(){
   document.getElementById('cutLabel').textContent = `${pad2(cutHour)}:00`;
 
   renderWeek();
+  renderMonth();
 }
 
 async function renderWeek(){
@@ -419,6 +532,36 @@ async function renderWeek(){
     return `<div class="day ${future?'future':''}" data-go="${keyOf(dd)}" tabindex="0">
       <div class="dot ${n===total&&!future?'full':''} ${isCur?'cur':''}"><div class="fill" style="height:${future?0:pct}%"></div></div>
       <div class="lbl">${DOW[dd.getDay()]}</div><div class="num">${dd.getDate()}</div></div>`;
+  }).join('');
+}
+
+/* ---------- monthly calendar ---------- */
+async function renderMonth(){
+  const grid=document.getElementById('calGrid'); if(!grid) return;
+  const y=calMonth.getFullYear(), m=calMonth.getMonth();
+  document.getElementById('calTitle').textContent=`${y}년 ${m+1}월`;
+  const lead=new Date(y,m,1).getDay();
+  const dim=new Date(y,m+1,0).getDate();
+  const today=midnight(new Date());
+  const start=startKey?parseKey(startKey):null;
+  const cells=[];
+  for(let i=0;i<lead;i++) cells.push(null);
+  for(let d=1;d<=dim;d++) cells.push(new Date(y,m,d));
+  const res=await Promise.all(cells.map(c=>{
+    if(!c) return Promise.resolve(null);
+    if(midnight(c)>today) return Promise.resolve({c,fut:true});
+    return loadDay(keyOf(c)).then(data=>({c,data}));
+  }));
+  grid.innerHTML=res.map(it=>{
+    if(!it) return `<div class="cal-cell blank"></div>`;
+    const c=it.c, isCur=keyOf(c)===keyOf(cur), dn=c.getDate();
+    if(it.fut) return `<div class="cal-cell future ${isCur?'cur':''}" data-go="${keyOf(c)}">${dn}</div>`;
+    let inProg=false, ratio=0, isStart=false;
+    if(start){ const pn=diffDays(c,start)+1; if(pn>=1){ inProg=true; const stg=stageFor(pn); ratio=doneCount(it.data,stg)/applicableTotal(stg); isStart=!!STAGE_STARTS[pn]; } }
+    if(!inProg) return `<div class="cal-cell out ${isCur?'cur':''}" data-go="${keyOf(c)}">${dn}</div>`;
+    const a=ratio<=0?0:(0.15+ratio*0.78);
+    const style=(a>0?`background:rgba(18,179,106,${a.toFixed(2)});`:'')+(ratio>0.55?'color:#fff;':'');
+    return `<div class="cal-cell ${isCur?'cur':''}" style="${style}" data-go="${keyOf(c)}">${dn}${isStart?'<span class="start"></span>':''}</div>`;
   }).join('');
 }
 
@@ -447,6 +590,9 @@ document.getElementById('prev').onclick=()=>{ cur=new Date(cur); cur.setDate(cur
 document.getElementById('next').onclick=()=>{ cur=new Date(cur); cur.setDate(cur.getDate()+1); render(); };
 document.getElementById('today').onclick=()=>{ cur=midnight(new Date()); render(); };
 document.getElementById('days').addEventListener('click',e=>{ const day=e.target.closest('.day'); if(day){ cur=parseKey(day.dataset.go); render(); } });
+document.getElementById('calGrid').addEventListener('click',e=>{ const cell=e.target.closest('.cal-cell[data-go]'); if(cell){ cur=parseKey(cell.dataset.go); render(); } });
+document.getElementById('calPrev').onclick=()=>{ calMonth=new Date(calMonth.getFullYear(),calMonth.getMonth()-1,1); renderMonth(); };
+document.getElementById('calNext').onclick=()=>{ calMonth=new Date(calMonth.getFullYear(),calMonth.getMonth()+1,1); renderMonth(); };
 
 function toggleExp(id){ document.getElementById(id).classList.toggle('closed'); }
 document.getElementById('foodTop').onclick=()=>toggleExp('foodCard');
@@ -462,7 +608,13 @@ const cutInput=document.getElementById('cutInput');
 document.getElementById('editCut').onclick=()=>{ cutInput.style.display='inline-block'; cutInput.value=pad2(cutHour)+':00'; cutInput.focus(); cutInput.showPicker&&cutInput.showPicker(); };
 cutInput.onchange=()=>{ cutHour=parseInt(cutInput.value.split(':')[0],10)||20; saveSettings(); cutInput.style.display='none'; render(); };
 
-function saveSettings(){ Store.set('so:settings', JSON.stringify({startKey,cutHour})); }
+function saveSettings(){ Store.set('so:settings', JSON.stringify({startKey,cutHour})); flashSaved('설정 저장됨'); }
+
+document.getElementById('exportBtn').onclick=()=>exportData();
+const importInput=document.getElementById('importInput');
+document.getElementById('importBtn').onclick=()=>importInput.click();
+importInput.onchange=()=>{ if(importInput.files&&importInput.files[0]){ importData(importInput.files[0]); importInput.value=''; } };
+document.getElementById('bannerX').onclick=()=>{ const dd=touch(); dd.bannerSeen=true; saveDay(keyOf(cur)); document.getElementById('banner').style.display='none'; };
 
 /* ---------- init ---------- */
 (async function init(){
