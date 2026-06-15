@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>스위치온 기록</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
+<style>
+  :root{
+    --ink:#14181F; --sub:#8A92A0; --line:#ECEEF1; --bg:#F6F7F9; --card:#FFFFFF;
+    --off:#D9DDE3; --on:#12B36A; --on-soft:#E7F8EF; --blue:#0066FF; --blue-soft:#EAF1FF;
+    --warn:#E8553D; --warn-soft:#FDECE8;
+    --radius:18px; --shadow:0 1px 2px rgba(20,24,31,.04), 0 8px 24px rgba(20,24,31,.05);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);}
+  .wrap{max-width:480px;margin:0 auto;padding:14px 16px 48px;}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin:6px 2px 16px;}
+  .brand{display:flex;align-items:baseline;gap:8px;}
+  .brand b{font-weight:800;font-size:20px;letter-spacing:-.02em;}
+  .brand span{font-size:12px;color:var(--sub);font-weight:600;}
+  .nav{display:flex;align-items:center;gap:4px;}
+  .nav button{border:0;background:var(--card);box-shadow:var(--shadow);width:34px;height:34px;border-radius:11px;
+    font-size:18px;color:var(--ink);display:grid;place-items:center;cursor:pointer;font-weight:700;}
+  .nav .today{width:auto;padding:0 12px;font-size:13px;font-weight:700;height:34px;}
+  .nav button:active{transform:scale(.94);}
+
+  .head{display:flex;align-items:center;justify-content:space-between;margin:0 2px 14px;}
+  .date{font-size:15px;font-weight:700;letter-spacing:-.01em;}
+  .daynum{font-size:12px;color:var(--sub);font-weight:600;margin-top:1px;}
+  .phase-badge{background:var(--blue-soft);color:var(--blue);font-size:12px;font-weight:800;
+    padding:7px 12px;border-radius:999px;letter-spacing:-.01em;white-space:nowrap;text-align:right;}
+
+  .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:14px;}
+
+  /* stage card */
+  .stage{padding:15px 16px;}
+  .stage h2{margin:0 0 11px;font-size:14px;font-weight:800;letter-spacing:-.01em;}
+  .stage .rules{display:grid;gap:8px;}
+  .stage .rule{display:flex;gap:10px;font-size:13.5px;align-items:flex-start;}
+  .stage .rule .k{flex:none;width:62px;color:var(--sub);font-weight:700;font-size:12px;padding-top:1px;}
+  .stage .rule .v{color:#2B313B;font-weight:600;}
+  .stage .rule.fast .v{color:var(--blue);}
+  .stage .note{font-size:12px;color:var(--sub);margin-top:12px;padding-top:11px;border-top:1px solid var(--line);line-height:1.55;}
+
+  /* master */
+  .master{position:relative;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;overflow:hidden;}
+  .master .label{font-size:13px;color:var(--sub);font-weight:700;}
+  .master .count{font-size:26px;font-weight:800;letter-spacing:-.03em;margin-top:2px;font-variant-numeric:tabular-nums;}
+  .master .count small{font-size:14px;color:var(--sub);font-weight:700;}
+  .mswitch{width:88px;height:48px;border-radius:999px;background:var(--off);position:relative;flex:none;transition:background .35s;}
+  .mknob{position:absolute;top:4px;left:4px;width:40px;height:40px;border-radius:50%;background:#fff;
+    box-shadow:0 2px 6px rgba(0,0,0,.18);transition:left .4s cubic-bezier(.34,1.56,.64,1);display:grid;place-items:center;font-size:18px;}
+  .master.done{background:linear-gradient(135deg,#0FB768,#37D08A);}
+  .master.done .label,.master.done .count,.master.done .count small{color:#fff;}
+  .master.done .mswitch{background:rgba(255,255,255,.35);}
+  .master.done .mknob{left:44px;}
+  @keyframes glow{0%,100%{box-shadow:0 2px 6px rgba(0,0,0,.18);}50%{box-shadow:0 0 0 8px rgba(255,255,255,.35);}}
+  .master.done .mknob{animation:glow 1.8s ease-in-out infinite;}
+  .master .mfill{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--on-soft);transition:width .45s cubic-bezier(.4,0,.2,1);z-index:0;}
+  .master .mtext,.master .mswitch{position:relative;z-index:1;}
+  .master.done .mfill{opacity:0;}
+  .wtag{display:inline-block;margin-left:6px;font-size:10px;font-weight:700;color:var(--blue);background:var(--blue-soft);padding:1px 6px;border-radius:6px;vertical-align:middle;}
+  .otag{display:inline-block;margin-left:6px;font-size:10px;font-weight:700;color:var(--sub);background:var(--bg);padding:1px 6px;border-radius:6px;vertical-align:middle;}
+  .row.weekly.on .tog{background:#5B93F6;}
+  .row.weekly.on .txt b{color:var(--blue);}
+  .row.optional.on .tog{background:#AEB6C2;}
+  .row.optional.on .txt b{color:var(--sub);}
+
+  /* habit list */
+  .row{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line);cursor:pointer;}
+  .row:last-child{border-bottom:0;}
+  .row:active{background:#FAFBFC;}
+  .row .txt{flex:1;min-width:0;}
+  .row .txt b{font-size:15px;font-weight:600;letter-spacing:-.01em;display:block;}
+  .row .txt span{font-size:11.5px;color:var(--sub);font-weight:500;}
+  .row.on .txt b{color:var(--on);}
+  .tog{width:50px;height:30px;border-radius:999px;background:var(--off);position:relative;flex:none;transition:background .25s;}
+  .tknob{position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:left .25s cubic-bezier(.34,1.56,.64,1);}
+  .row.on .tog{background:var(--on);}
+  .row.on .tknob{left:23px;}
+  .ctr{display:flex;align-items:center;gap:0;flex:none;background:var(--bg);border-radius:999px;padding:3px;}
+  .ctr button{border:0;background:transparent;width:30px;height:28px;font-size:18px;font-weight:700;color:var(--ink);cursor:pointer;border-radius:999px;}
+  .ctr button:active{background:#E5E8EC;}
+  .ctr .val{min-width:34px;text-align:center;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;}
+  .row.goal .ctr{background:var(--on-soft);}
+  .row.goal .ctr .val{color:var(--on);}
+
+  /* expandable reference */
+  .exp .ex-top{padding:15px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;}
+  .exp .ex-top h3{margin:0;font-size:14px;font-weight:800;}
+  .exp .chev{color:var(--sub);font-size:13px;transition:transform .2s;}
+  .exp.closed .chev{transform:rotate(-90deg);}
+  .exp .ex-body{padding:0 16px 16px;}
+  .exp.closed .ex-body{display:none;}
+  .foodgrp{padding:11px 0;border-top:1px solid var(--line);}
+  .foodgrp:first-child{border-top:0;}
+  .foodgrp .gh{display:flex;align-items:center;gap:7px;margin-bottom:5px;}
+  .foodgrp .gh b{font-size:12.5px;font-weight:800;}
+  .foodgrp .gh .tag{font-size:10px;font-weight:700;color:var(--sub);}
+  .foodgrp.cur .gh b{color:var(--on);}
+  .foodgrp.cur .gh .tag{color:var(--on);}
+  .foodgrp p{margin:0;font-size:12.5px;color:#3B414B;line-height:1.6;}
+  .ban .gh b{color:var(--warn);}
+  .ban p{color:#4A5059;}
+
+  /* condition + note */
+  .panel{padding:15px 16px;}
+  .panel h3{margin:0 0 11px;font-size:13px;font-weight:800;}
+  .moods{display:flex;gap:9px;}
+  .mood{flex:1;height:50px;border:1.5px solid var(--line);background:var(--card);border-radius:14px;font-size:24px;cursor:pointer;display:grid;place-items:center;transition:.15s;}
+  .mood:active{transform:scale(.95);}
+  .mood.sel{border-color:var(--blue);background:var(--blue-soft);}
+  textarea{width:100%;border:1.5px solid var(--line);border-radius:14px;padding:12px;font-family:inherit;font-size:14px;resize:none;margin-top:13px;color:var(--ink);outline:none;}
+  textarea:focus{border-color:var(--blue);}
+  textarea::placeholder{color:#BCC2CB;}
+
+  /* weekly */
+  .week{padding:15px 14px;}
+  .week h3{margin:0 0 13px;font-size:13px;font-weight:800;}
+  .days{display:flex;justify-content:space-between;}
+  .day{display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;flex:1;}
+  .day .dot{width:30px;height:30px;border-radius:50%;border:2px solid var(--line);position:relative;overflow:hidden;background:var(--bg);}
+  .day .dot .fill{position:absolute;bottom:0;left:0;right:0;background:var(--on);transition:height .3s;}
+  .day .dot.full{border-color:var(--on);}
+  .day .dot.cur{border-color:var(--ink);border-width:2.5px;}
+  .day .lbl{font-size:11px;color:var(--sub);font-weight:600;}
+  .day .num{font-size:11px;font-weight:700;color:var(--ink);}
+  .day.future{opacity:.4;}
+
+  /* settings */
+  .setbar{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:18px;font-size:12px;color:var(--sub);flex-wrap:wrap;}
+  .setitem{display:flex;align-items:center;gap:5px;}
+  .setbar button{border:0;background:transparent;color:var(--blue);font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;}
+  .setbar input{font-family:inherit;font-size:12px;border:1px solid var(--line);border-radius:8px;padding:3px 6px;color:var(--ink);}
+  .src-note{text-align:center;font-size:11px;color:#BCC2CB;margin-top:14px;}
+
+  @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important;}}
+  button:focus-visible,.row:focus-visible,.day:focus-visible,.mood:focus-visible,.ex-top:focus-visible{outline:2.5px solid var(--blue);outline-offset:2px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand"><b>스위치온</b><span>기록</span></div>
+    <div class="nav">
+      <button id="prev" aria-label="이전 날">‹</button>
+      <button class="today" id="today">오늘</button>
+      <button id="next" aria-label="다음 날">›</button>
+    </div>
+  </div>
+
+  <div class="head">
+    <div><div class="date" id="dateLabel">—</div><div class="daynum" id="dayNum">—</div></div>
+    <div class="phase-badge" id="phaseBadge">—</div>
+  </div>
+
+  <!-- stage guidance -->
+  <div class="card stage" id="stageCard">
+    <h2 id="stageName">—</h2>
+    <div class="rules" id="stageRules"></div>
+    <div class="note" id="stageNote"></div>
+  </div>
+
+  <!-- master switch -->
+  <div class="card master" id="master">
+    <div class="mfill" id="mfill"></div>
+    <div class="mtext">
+      <div class="label">오늘의 스위치</div>
+      <div class="count"><span id="doneCount">0</span><small id="totalCount"> / 8 켜짐</small></div>
+    </div>
+    <div class="mswitch"><div class="mknob" id="mknob">⚡</div></div>
+  </div>
+
+  <!-- daily checklist -->
+  <div class="card" id="list"></div>
+
+  <!-- allowed foods reference -->
+  <div class="card exp closed" id="foodCard">
+    <div class="ex-top" id="foodTop" tabindex="0" role="button">
+      <h3>단계별 허용식품</h3><span class="chev">▾</span>
+    </div>
+    <div class="ex-body" id="foodBody"></div>
+  </div>
+
+  <!-- banned foods -->
+  <div class="card exp closed" id="banCard">
+    <div class="ex-top" id="banTop" tabindex="0" role="button">
+      <h3>금기식품 (전 기간)</h3><span class="chev">▾</span>
+    </div>
+    <div class="ex-body" id="banBody"></div>
+  </div>
+
+  <!-- condition + note -->
+  <div class="card panel">
+    <h3>오늘 컨디션</h3>
+    <div class="moods" id="moods">
+      <button class="mood" data-m="😪" aria-label="지침">😪</button>
+      <button class="mood" data-m="🙂" aria-label="보통">🙂</button>
+      <button class="mood" data-m="💪" aria-label="좋음">💪</button>
+      <button class="mood" data-m="🔥" aria-label="최고">🔥</button>
+    </div>
+    <textarea id="note" rows="2" placeholder="오늘 메모 (선택) — 먹은 것, 단식 시간, 컨디션 등"></textarea>
+  </div>
+
+  <!-- weekly -->
+  <div class="card week">
+    <h3>이번 주 루틴</h3>
+    <div class="days" id="days"></div>
+  </div>
+
+  <div class="setbar">
+    <div class="setitem"><span>시작일</span><span id="startLabel">—</span><button id="editStart">변경</button>
+      <input type="date" id="startInput" style="display:none"></div>
+    <div class="setitem"><span>단식 시작</span><span id="cutLabel">—</span><button id="editCut">변경</button>
+      <input type="time" id="cutInput" style="display:none"></div>
+  </div>
+  <div class="src-note">박용우 「스위치온 다이어트」 기준 · 4주 5단계</div>
+</div>
+
+<script>
+/* ---------- storage: window.storage -> localStorage -> memory ---------- */
+const mem = {};
+const Store = {
+  has: typeof window !== 'undefined' && window.storage,
+  async get(k){ if(this.has){ try{ const r=await window.storage.get(k); return r?r.value:null; }catch(e){ return lg(k);} } return lg(k); },
+  async set(k,v){ if(this.has){ try{ await window.storage.set(k,v); return; }catch(e){} } ls(k,v); }
+};
+function lg(k){ try{ return localStorage.getItem(k); }catch(e){ return (k in mem)?mem[k]:null; } }
+function ls(k,v){ try{ localStorage.setItem(k,v); }catch(e){ mem[k]=v; } }
+
+/* ---------- daily habits (stable across stages) ---------- */
+const TOGGLES = [
+  {key:'fasting',  name:'공복 14시간 지키기', sub:''},
+  {key:'banned',   name:'금기식품 안 먹기', sub:'술·설탕·밀가루·튀김'},
+  {key:'veggies',  name:'채소 챙기기', sub:'매 끼니 함께', from:2, optSub:'1~3일차엔 허기 심할 때만'},
+  {key:'exercise', name:'운동하기', sub:'주 4회 고강도', weekly:true},
+  {key:'sleep',    name:'6시간+ 자기', sub:'자정~새벽4시 포함'},
+  {key:'supps',    name:'영양제 챙기기', sub:'유산균·종합비타민·오메가3'},
+];
+const WATER_GOAL = 8;
+const DOW = ['일','월','화','수','목','금','토'];
+
+/* ---------- 5-stage program model ---------- */
+function stageFor(d){
+  if(d<=3)  return {n:1,name:'1단계 · 지방 대사 스위치 켜기',badge:'1단계 1~3일차',drinks:4,
+    rules:[['단백질음료','하루 4번 (아침·점심·오후간식·저녁)'],['식사','없음 — 음료만'],['공복','기본 14시간']],
+    note:'장에 휴식을 주는 구간. 허기 심하면 채소·두부·플레인요거트만 허용. 아침 공복에 유산균, 하루 60분 걷기.'};
+  if(d<=7)  return {n:2,name:'2단계 · 렙틴 저항성·지방간 개선',badge:'2단계 4~7일차',drinks:3,
+    rules:[['단백질음료','하루 3번 (아침·오후간식·저녁)'],['점심','저탄수 식사 (잡곡밥 반공기+단백질)'],['공복','기본 14시간']],
+    note:'점심 한 끼가 추가됩니다. 영양제(유산균·종합비타민·오메가3·비타민C·CoQ10) 챙기기.'};
+  if(d<=14) return {n:3,name:'3단계 · 인슐린 저항성 개선',badge:'3단계 2주차',drinks:2,
+    rules:[['단백질음료','하루 2번 (아침·오후간식)'],['점심','저탄수'],['저녁','무탄수 (단백질 충분히)'],['단식','주 1회 24시간']],
+    note:'저녁은 등푸른생선·수육·샤브샤브로 배부르게. 단식일엔 고강도 운동 피하기.'};
+  if(d<=21) return {n:4,name:'4단계 · 대사유연성 회복',badge:'4단계 3주차',drinks:2,
+    rules:[['단백질음료','하루 2번 (아침·오후간식)'],['점심','저탄수'],['저녁','무탄수'],['단식','주 2회 24시간 (연속 X)']],
+    note:'단식 후엔 고단백으로 근손실 방지. 근육량이 시작일만큼 회복 안 됐으면 3주차를 한 번 더.'};
+  if(d<=28) return {n:5,name:'5단계 · 체지방 감량 극대화',badge:'5단계 4주차',drinks:2,
+    rules:[['단백질음료','하루 2번 (아침·오후간식)'],['점심·저녁','모두 저탄수'],['단식','주 3회 24시간 (연속 X)']],
+    note:'마지막 주. 과일은 하루 1개까지 허용.'};
+  return {n:6,name:'유지기',badge:'유지기',drinks:0,
+    rules:[['식사','매 끼니 채소+단백질, 과일 하루 1개'],['단식','주 1회 24시간 + 14시간 공복 유지']],
+    note:'체중이 다시 늘면 즉시 재시작. 당류·트랜스지방·가공육은 최대한 피하기.'};
+}
+
+/* ---------- allowed foods (cumulative by stage) ---------- */
+const FOODS = [
+  {n:1,label:'1단계 (1~3일차) · 베이스',txt:'단백질셰이크, 신·프로바이오틱스, 양파·마늘·고춧가루·식초·후추·강황·허브, 양배추·무·당근·오이·브로콜리·파프리카·아보카도, 코코넛/올리브/아보카도오일·냉압착들기름, 녹차·허브티, 무가당 플레인요거트, 두부·연두부·무가당 두유'},
+  {n:2,label:'2단계 (4~7일차) 추가',txt:'현미잡곡밥 1/2공기(또는 흰쌀밥 1/3), 해조류(미역·다시마·톳), 버섯류, 와사비, 저염간장(약간), 달걀, 생선·생선회, 해산물(굴·조개·새우·게·오징어·낙지·문어), 닭가슴살(껍질 제거), 수육(삶은 돼지 살코기), 소고기 살코기 샤브샤브'},
+  {n:3,label:'3단계 (2주차) 추가',txt:'우유(하루 2잔 이하), 짜지 않은 천연치즈, 퀴노아, 콩류(검은콩·병아리콩·완두콩·렌틸콩), 견과류(한 줌), 블랙커피(오전 1잔), 두부쌈장, 김치(약간)'},
+  {n:4,label:'4·5단계 (3·4주차) 추가',txt:'지방 적은 부위의 닭·소·돼지고기, 토마토·방울토마토, 단호박, 밤, 바나나, 베리류, 운동한 날 고구마/바나나 1개 (5단계: 과일 하루 1개까지)'},
+];
+const BANNED = [
+  ['설탕·단 것','정백당·액상과당, 단 음료·커피믹스·과자·사탕·도넛·아이스크림·주스'],
+  ['밀가루','빵·케이크·파스타·라면·자장면·우동 등'],
+  ['술','종류 무관, 한 모금도 금지'],
+  ['나쁜 지방','포화지방(삼겹살·갈비·곱창), 트랜스지방(과자·라면·도넛·냉동피자·튀김)'],
+  ['카페인','기본 금지 (2주차부터 오전 블랙커피 1잔만 허용)'],
+  ['대체당·짠 음식','제로음료 등 강한 단맛, 국물·양념장·젓갈류'],
+];
+
+/* ---------- data ---------- */
+const cache = {};
+function defDay(){ return {checks:{}, drinks:0, water:0, mood:null, note:''}; }
+async function loadDay(key){
+  if(cache[key]) return cache[key];
+  let d=defDay();
+  try{ const raw=await Store.get('so:day:'+key); if(raw) d=Object.assign(defDay(),JSON.parse(raw)); }catch(e){}
+  cache[key]=d; return d;
+}
+function saveDay(key){ const d=cache[key]; if(d) Store.set('so:day:'+key, JSON.stringify(d)); }
+function touch(){ const k=keyOf(cur); if(!cache[k]) cache[k]=defDay(); return cache[k]; }
+
+/* ---------- date utils ---------- */
+function keyOf(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function parseKey(k){ const [y,m,da]=k.split('-').map(Number); return new Date(y,m-1,da); }
+function midnight(d){ return new Date(d.getFullYear(),d.getMonth(),d.getDate()); }
+function diffDays(a,b){ return Math.round((midnight(a)-midnight(b))/86400000); }
+function pad2(n){ return String(n).padStart(2,'0'); }
+function weekDatesFor(d){ const base=midnight(d), dow=(base.getDay()+6)%7, mon=new Date(base); mon.setDate(base.getDate()-dow);
+  return Array.from({length:7},(_,i)=>{ const x=new Date(mon); x.setDate(mon.getDate()+i); return x; }); }
+
+/* ---------- state ---------- */
+let cur = midnight(new Date());
+let startKey = null;
+let cutHour = 20;   // 단식 시작 시각(저녁 컷오프)
+
+/* ---------- adherence ---------- */
+function dailyGating(stg){ return TOGGLES.filter(t=>!t.weekly && stg.n>=(t.from||1)); }
+function applicableTotal(stg){ return dailyGating(stg).length + 1 + (stg.drinks>0?1:0); } // gating toggles + water + (drinks?)
+function doneCount(d,stg){
+  let n=0;
+  dailyGating(stg).forEach(t=>{ if(d.checks[t.key]) n++; });
+  if((d.water||0)>=WATER_GOAL) n++;
+  if(stg.drinks>0 && (d.drinks||0)>=stg.drinks) n++;
+  return n;
+}
+
+/* ---------- render ---------- */
+async function render(){
+  const k=keyOf(cur);
+  const d=await loadDay(k);
+  const start=startKey?parseKey(startKey):cur;
+  const dayNum=Math.max(1,diffDays(cur,start)+1);
+  const stg=stageFor(dayNum);
+  const wkData=await Promise.all(weekDatesFor(cur).map(dd=>loadDay(keyOf(dd))));
+  const weekEx=wkData.filter(x=>x.checks&&x.checks.exercise).length;
+
+  document.getElementById('dateLabel').textContent=`${cur.getMonth()+1}월 ${cur.getDate()}일 (${DOW[cur.getDay()]})`;
+  document.getElementById('dayNum').textContent=`${dayNum}일차`;
+  document.getElementById('phaseBadge').textContent=stg.badge;
+
+  // stage card
+  document.getElementById('stageName').textContent=stg.name;
+  const eatStart=(cutHour+14)%24;
+  const fastRow=`<div class="rule fast"><div class="k">공복 시간</div><div class="v">단식 ${pad2(cutHour)}:00–익일 ${pad2(eatStart)}:00 · 식사 ${pad2(eatStart)}:00–${pad2(cutHour)}:00</div></div>`;
+  document.getElementById('stageRules').innerHTML =
+    stg.rules.map(r=>`<div class="rule"><div class="k">${r[0]}</div><div class="v">${r[1]}</div></div>`).join('') + fastRow;
+  document.getElementById('stageNote').textContent=stg.note;
+
+  // checklist
+  const list=document.getElementById('list');
+  let rows='';
+  if(stg.drinks>0){
+    const c=d.drinks||0, goal=c>=stg.drinks;
+    rows+=`<div class="row ${goal?'on goal':''}" tabindex="0">
+      <div class="txt"><b>단백질 음료</b><span>${c} / ${stg.drinks}회</span></div>
+      <div class="ctr"><button data-d="-1" aria-label="줄이기">−</button><span class="val">${c}</span><button data-d="1" aria-label="늘리기">＋</button></div></div>`;
+  }
+  dailyGating(stg).forEach(t=>{
+    const on=!!d.checks[t.key];
+    rows+=`<div class="row ${on?'on':''}" data-key="${t.key}" tabindex="0" role="switch" aria-checked="${on}">
+      <div class="txt"><b>${t.name}</b>${t.sub?`<span>${t.sub}</span>`:''}</div>
+      <div class="tog"><div class="tknob"></div></div></div>`;
+  });
+  const cups=d.water||0, wgoal=cups>=WATER_GOAL;
+  rows+=`<div class="row ${wgoal?'on goal':''}" tabindex="0">
+    <div class="txt"><b>물 마시기</b><span>${cups} / ${WATER_GOAL}컵</span></div>
+    <div class="ctr"><button data-w="-1" aria-label="줄이기">−</button><span class="val">${cups}</span><button data-w="1" aria-label="늘리기">＋</button></div></div>`;
+  TOGGLES.filter(t=>!t.weekly && stg.n<(t.from||1)).forEach(t=>{
+    const on=!!d.checks[t.key];
+    rows+=`<div class="row optional ${on?'on':''}" data-key="${t.key}" tabindex="0" role="switch" aria-checked="${on}">
+      <div class="txt"><b>${t.name}<span class="otag">선택</span></b><span>${t.optSub||'선택'}</span></div>
+      <div class="tog"><div class="tknob"></div></div></div>`;
+  });
+  TOGGLES.filter(t=>t.weekly).forEach(t=>{
+    const on=!!d.checks[t.key];
+    rows+=`<div class="row weekly ${on?'on':''}" data-key="${t.key}" tabindex="0" role="switch" aria-checked="${on}">
+      <div class="txt"><b>${t.name}<span class="wtag">주 목표</span></b><span>주 4회 목표 · 이번 주 ${weekEx}/4</span></div>
+      <div class="tog"><div class="tknob"></div></div></div>`;
+  });
+  list.innerHTML=rows;
+
+  // master
+  const total=applicableTotal(stg), done=doneCount(d,stg);
+  document.getElementById('doneCount').textContent=done;
+  document.getElementById('totalCount').textContent=` / ${total} 켜짐`;
+  document.getElementById('master').classList.toggle('done',done===total);
+  document.getElementById('mknob').textContent=done===total?'🔥':'⚡';
+
+  // food reference (highlight current stage group)
+  document.getElementById('foodBody').innerHTML=FOODS.map(g=>{
+    const isCur=(stg.n>=g.n) && ((g.n<4 && stg.n===g.n) || (g.n===4 && stg.n>=4 && stg.n<=5));
+    return `<div class="foodgrp ${isCur?'cur':''}"><div class="gh"><b>${g.label}</b>${isCur?'<span class="tag">지금 단계</span>':''}</div><p>${g.txt}</p></div>`;
+  }).join('');
+  document.getElementById('banBody').innerHTML=`<div class="ban">`+
+    BANNED.map(b=>`<div class="foodgrp"><div class="gh"><b>${b[0]}</b></div><p>${b[1]}</p></div>`).join('')+`</div>`;
+
+  // mood + note
+  document.querySelectorAll('.mood').forEach(m=>m.classList.toggle('sel',m.dataset.m===d.mood));
+  const note=document.getElementById('note');
+  if(document.activeElement!==note) note.value=d.note||'';
+
+  // settings labels
+  document.getElementById('startLabel').textContent = startKey?`${parseKey(startKey).getMonth()+1}.${parseKey(startKey).getDate()}`:'오늘';
+  document.getElementById('cutLabel').textContent = `${pad2(cutHour)}:00`;
+
+  renderWeek();
+}
+
+async function renderWeek(){
+  const days=document.getElementById('days');
+  const base=midnight(cur), dow=(base.getDay()+6)%7, mon=new Date(base); mon.setDate(base.getDate()-dow);
+  const today=midnight(new Date()), start=startKey?parseKey(startKey):today;
+  const loads=[];
+  for(let i=0;i<7;i++){ const dd=new Date(mon); dd.setDate(mon.getDate()+i); loads.push(loadDay(keyOf(dd)).then(data=>({dd,data}))); }
+  const res=await Promise.all(loads);
+  days.innerHTML=res.map(({dd,data})=>{
+    const future=midnight(dd)>today;
+    const dn=Math.max(1,diffDays(dd,start)+1);
+    const stg=stageFor(dn), total=applicableTotal(stg);
+    const n=future?0:doneCount(data,stg);
+    const pct=Math.round(n/total*100);
+    const isCur=keyOf(dd)===keyOf(cur);
+    return `<div class="day ${future?'future':''}" data-go="${keyOf(dd)}" tabindex="0">
+      <div class="dot ${n===total&&!future?'full':''} ${isCur?'cur':''}"><div class="fill" style="height:${future?0:pct}%"></div></div>
+      <div class="lbl">${DOW[dd.getDay()]}</div><div class="num">${dd.getDate()}</div></div>`;
+  }).join('');
+}
+
+/* ---------- interactions ---------- */
+document.getElementById('list').addEventListener('click',e=>{
+  const db=e.target.closest('button[data-d]');
+  if(db){ const d=touch(); d.drinks=Math.max(0,Math.min(6,(d.drinks||0)+parseInt(db.dataset.d,10))); saveDay(keyOf(cur)); render(); return; }
+  const wb=e.target.closest('button[data-w]');
+  if(wb){ const d=touch(); d.water=Math.max(0,Math.min(12,(d.water||0)+parseInt(wb.dataset.w,10))); saveDay(keyOf(cur)); render(); return; }
+  const row=e.target.closest('.row[data-key]');
+  if(row){ const d=touch(); d.checks[row.dataset.key]=!d.checks[row.dataset.key]; saveDay(keyOf(cur)); render(); }
+});
+document.getElementById('list').addEventListener('keydown',e=>{
+  if(e.key!=='Enter'&&e.key!==' ')return;
+  const row=e.target.closest('.row[data-key]');
+  if(row){ e.preventDefault(); const d=touch(); d.checks[row.dataset.key]=!d.checks[row.dataset.key]; saveDay(keyOf(cur)); render(); }
+});
+document.getElementById('moods').addEventListener('click',e=>{
+  const b=e.target.closest('.mood'); if(!b)return;
+  const d=touch(); d.mood=(d.mood===b.dataset.m)?null:b.dataset.m; saveDay(keyOf(cur)); render();
+});
+const note=document.getElementById('note');
+note.addEventListener('input',()=>{ const d=touch(); d.note=note.value; saveDay(keyOf(cur)); });
+
+document.getElementById('prev').onclick=()=>{ cur=new Date(cur); cur.setDate(cur.getDate()-1); render(); };
+document.getElementById('next').onclick=()=>{ cur=new Date(cur); cur.setDate(cur.getDate()+1); render(); };
+document.getElementById('today').onclick=()=>{ cur=midnight(new Date()); render(); };
+document.getElementById('days').addEventListener('click',e=>{ const day=e.target.closest('.day'); if(day){ cur=parseKey(day.dataset.go); render(); } });
+
+function toggleExp(id){ document.getElementById(id).classList.toggle('closed'); }
+document.getElementById('foodTop').onclick=()=>toggleExp('foodCard');
+document.getElementById('banTop').onclick=()=>toggleExp('banCard');
+document.getElementById('foodTop').onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();toggleExp('foodCard');} };
+document.getElementById('banTop').onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();toggleExp('banCard');} };
+
+const startInput=document.getElementById('startInput');
+document.getElementById('editStart').onclick=()=>{ startInput.style.display='inline-block'; startInput.value=startKey||keyOf(cur); startInput.focus(); startInput.showPicker&&startInput.showPicker(); };
+startInput.onchange=()=>{ startKey=startInput.value; saveSettings(); startInput.style.display='none'; render(); };
+
+const cutInput=document.getElementById('cutInput');
+document.getElementById('editCut').onclick=()=>{ cutInput.style.display='inline-block'; cutInput.value=pad2(cutHour)+':00'; cutInput.focus(); cutInput.showPicker&&cutInput.showPicker(); };
+cutInput.onchange=()=>{ cutHour=parseInt(cutInput.value.split(':')[0],10)||20; saveSettings(); cutInput.style.display='none'; render(); };
+
+function saveSettings(){ Store.set('so:settings', JSON.stringify({startKey,cutHour})); }
+
+/* ---------- init ---------- */
+(async function init(){
+  try{ const raw=await Store.get('so:settings'); if(raw){ const s=JSON.parse(raw); startKey=s.startKey||null; if(typeof s.cutHour==='number') cutHour=s.cutHour; } }catch(e){}
+  if(!startKey){ startKey=keyOf(midnight(new Date())); saveSettings(); }
+  render();
+})();
+</script>
+</body>
+</html>
